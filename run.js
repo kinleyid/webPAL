@@ -9,8 +9,6 @@ var filename = pID + "PAL";
 
 var HEIGHT = screen.availHeight;
 var WIDTH = screen.availWidth;
-var canvH = Math.round(0.18*HEIGHT);
-var canvW = Math.round(0.28*HEIGHT);
 var radius;
 var nCanvs = 6;// Number of peripheral canvases
 var nTokenTypes = 100;
@@ -34,7 +32,7 @@ var nFeedbackFrames = 120;
 var feedbackMs = 2000;
 var nIncorrectFrames = 120; // Number of frames subject is told they are incorrect and to try again
 var filledProb = 0.2;//0.35;//6/9;
-var tokenPxlSz = [Math.round(canvH/12),Math.round(canvH/12)]; // Size of token pixels in real pixels [width,height]
+// var tokenPxlSz = [Math.round(getCanvDims().h/12),Math.round(getCanvDims().h/12)]; // Size of token pixels in real pixels [width,height]
 var xRange = [2,3,4,5,6,7];
 var yRange = [1,2,3,4,5];
 var fPropRange = [0.4,0.45,0.5];
@@ -100,23 +98,31 @@ var masterStyles = [[1,1,1,"both",2],
 					[5,5,0.2,"cross",2],
 					[4,3,0.2,"both",1]];
 
+var instructions = document.getElementById('instructions');
+var masterDiv = document.getElementById('masterDiv');
 function startPractice() {
     tryCount = 0;
     trialCount = 0;
 	document.getElementById("instructions").style.display = "none";
 	trialwise_nTokens = practice_nTokens;
 	trialwise_nCanvs = practice_nCanvs;
-    if(trialwise_nCanvs[trialCount]==8){
-        radius = Math.round(0.42*HEIGHT);
-		startTheta = Math.PI/8;
-    } else if(trialwise_nCanvs[trialCount]==6){
-        radius = Math.round(0.38*HEIGHT);
-        startTheta = Math.PI/2;
-    }
+    setGeometry();
     initialize()
 	createCanvs()
 	hideAll()
     setTimeout(showToken, preTrialMs);
+}
+
+function setGeometry() {
+    screenDims = getScreenDims();
+    var minDim = Math.min(screenDims.w, screenDims.h);
+    if(trialwise_nCanvs[trialCount]==8){
+        radius = Math.round(0.42*minDim);
+		startTheta = Math.PI/8;
+    } else if(trialwise_nCanvs[trialCount]==6){
+        radius = Math.round(0.38*minDim);
+        startTheta = Math.PI/2;
+    }
 }
 
 function intermediaryScreen() {
@@ -138,13 +144,7 @@ function startForReal() {
 	document.getElementById("instructions").style.display = "none";
 	trialwise_nTokens = masterTrialwise_nTokens;
 	trialwise_nCanvs = masterTrialwise_nCanvs;
-    if(trialwise_nCanvs[trialCount]==8){
-        radius = Math.round(0.42*HEIGHT);
-		startTheta = Math.PI/8;
-    } else if(trialwise_nCanvs[trialCount]==6){
-        radius = Math.round(0.38*HEIGHT);
-        startTheta = Math.PI/2;
-    }
+    setGeometry();
 	createCanvs();
 	hideAll();
 	trialCount = 0;
@@ -156,21 +156,21 @@ function startForReal() {
         ctxs[0].fillStyle = "#000000";
         ctxs[0].textAlign="center";
         ctxs[0].font="2vw Verdana";
-        ctxs[0].fillText(trialwise_nTokens[trialCount] + " shape" + (trialwise_nTokens[trialCount]>1?"s":"") + " now",canvW/2,canvH/2); 
-        ctxs[0].clearRect(0,0,canvW,canvH);
+        ctxs[0].fillText(trialwise_nTokens[trialCount] + " shape" + (trialwise_nTokens[trialCount]>1?"s":"") + " now",getCanvDims().w/2,getCanvDims().h/2); 
+        ctxs[0].clearRect(0,0,getCanvDims().w, getCanvDims().h);
     } else {
         setTimeout(showToken, preTrialMs);
     }
 }
 
 function showToken(){
-    ctxs[showingOrder[trialCount][canvCount]].clearRect(0,0,canvW,canvH);
+    ctxs[showingOrder[trialCount][canvCount]].clearRect(0,0,getCanvDims().w,getCanvDims().h);
     if(tokens[trialCount][showingOrder[trialCount][canvCount]] != null){
         tokens[trialCount][showingOrder[trialCount][canvCount]].draw(ctxs[showingOrder[trialCount][canvCount]]);
     }
     setTimeout(function() {
 		ctxs[showingOrder[trialCount][canvCount]].fillStyle = "#000000";
-		ctxs[showingOrder[trialCount][canvCount]].fillRect(0,0,canvW,canvH);
+		ctxs[showingOrder[trialCount][canvCount]].fillRect(0,0,getCanvDims().w,getCanvDims().h);
 		canvCount++;
 		if(canvCount == trialwise_nCanvs[trialCount]){
 			canvCount = 0;
@@ -192,7 +192,7 @@ function testToken(){
 			canvs[canvIdx].style.cursor = "pointer";
 		}
 	}
-	ctxs[0].clearRect(0,0,canvW,canvH);
+	ctxs[0].clearRect(0,0,getCanvDims().w,getCanvDims().h);
 	tokens[trialCount][testingOrder[trialCount][canvCount]].draw(ctxs[0]);
     presentationTime = performance.now();
 }
@@ -208,15 +208,15 @@ function evaluateSelection(event){
 }
 
 function animateMiddleCanv(idx){
-	ctxs[0].clearRect(0,0,canvW,canvH);
+	ctxs[0].clearRect(0, 0, getCanvDims().w, getCanvDims().h);
 	var animationRate = 0.8;
 	var leftPos = parseInt(canvs[0].style.left);
 	var topPos = parseInt(canvs[0].style.top);
 	var dL = (parseInt(canvs[idx].style.left) - leftPos);
 	var dT = (parseInt(canvs[idx].style.top) - topPos);
 	if(Math.abs(dL) < 10 && Math.abs(dT) < 10) { // Reset
-		canvs[0].style.left = WIDTH/2 - canvW/2 + "px";
-		canvs[0].style.top = HEIGHT/2 - canvH/2 + "px";
+		canvs[0].style.left = getScreenDims().w/2 - getCanvDims().w/2 + "px";
+		canvs[0].style.top = getScreenDims().h/2 - getCanvDims().h/2 + "px";
 		ctxs[0].globalAlpha = 1;
 		nextTest();
 	} else {
@@ -252,20 +252,22 @@ function nextTest(){
 			}
 		}
         if (isPractice && !correct) {
-            trialCount--; // Retry
+            tryCount--; // Retry
         } else {
             tryCount = correct ? 0 : tryCount + 1;
         }
-        if (tryCount < nTries) {
+        if (!correct && tryCount < nTries) {
             ctxs[0].fillStyle = "#000000";
             ctxs[0].textAlign="center";
             ctxs[0].font="2vw Verdana";
-            ctxs[0].fillText("Try again",canvW/2,canvH/2); 
+            ctxs[0].fillText("Try again",getCanvDims().w/2,getCanvDims().h/2); 
             canvCount = 0;
             showingOrder[trialCount] = sample(showingOrder[trialCount],1,showingOrder[trialCount].length).map(x=>x[0]);
             testingOrder[trialCount] = sample(testingOrder[trialCount],1,testingOrder[trialCount].length).map(x=>x[0]);
+            trialCount--;
+        } else {
+            feedbackScreen();
         }
-        feedbackScreen();
         setTimeout(nextTrial, feedbackMs);
 	} else {
 		testToken();
@@ -275,7 +277,7 @@ function nextTest(){
 function feedbackScreen(){
 	var canvIdx, canvColour, tokenIdx, nNewPoints = 0;
 	for(canvIdx = 0; canvIdx < canvs.length; canvIdx++){
-		ctxs[canvIdx].clearRect(0,0,canvW,canvH);
+		ctxs[canvIdx].clearRect(0,0,getCanvDims().w,getCanvDims().h);
 		if(tokens[trialCount][canvIdx] != null){
 			tokens[trialCount][canvIdx].draw(ctxs[canvIdx]);
 			tokenIdx = testingOrder[trialCount].indexOf(canvIdx);
@@ -300,13 +302,7 @@ function nextTrial(){
 	trialCount++;
 	canvCount = 0;
 	RESPs = [];
-    if(trialwise_nCanvs[trialCount]==8){
-        radius = Math.round(0.42*HEIGHT);
-		startTheta = Math.PI/8;
-    } else if(trialwise_nCanvs[trialCount]==6){
-        radius = Math.round(0.38*HEIGHT);
-        startTheta = Math.PI/2;
-    }
+    setGeometry();
 	removeCanvs();
 	createCanvs();
 	hideAll()
@@ -321,9 +317,9 @@ function nextTrial(){
             ctxs[0].fillStyle = "#000000";
             ctxs[0].textAlign="center";
             ctxs[0].font="2vw Verdana";
-            ctxs[0].fillText(trialwise_nTokens[trialCount] + " shape" + (trialwise_nTokens[trialCount]>1?"s":"") + " now",canvW/2,canvH/2); 
+            ctxs[0].fillText(trialwise_nTokens[trialCount] + " shape" + (trialwise_nTokens[trialCount]>1?"s":"") + " now",getCanvDims().w/2,getCanvDims().h/2); 
             setTimeout(function() {
-                ctxs[0].clearRect(0,0,canvW,canvH);
+                ctxs[0].clearRect(0,0,getCanvDims().w,getCanvDims().h);
                 setTimeout(showToken, preTrialMs);
             }, preTrialTextMs);
         } else {
@@ -347,26 +343,28 @@ function removeCanvs() {
 function createCanvs(){
 	var nCanvs = trialwise_nCanvs[trialCount];
 	var canvIdx;
+    var HEIGHT = masterDiv.clientHeight;
+    var WIDTH = masterDiv.clientWidth;
 	for(canvIdx = 0; canvIdx <= nCanvs; canvIdx++){
 		var canv = document.createElement('canvas');
 		canv.Idx = canvIdx;	
-		canv.addEventListener("click", evaluateSelection, false);
-		canv.addEventListener("touchend", evaluateSelection, false);
-		canv.height = canvH;
-		canv.width = canvW;
+		canv.addEventListener("click", evaluateSelection);
+		// canv.addEventListener("touchend", evaluateSelection, false);
+        canv.height = getCanvDims().h;
+        canv.width = getCanvDims().w;
 		canv.style.position = "absolute";
 		ctx = canv.getContext("2d");
 		if(canvIdx == 0){// Middle canvas
 			ctx.fillStyle = "#FFFFFF";
 			canv.classList.add("testCanv");
-			canv.style.left = WIDTH/2 - canvW/2 + "px";
-			canv.style.top = HEIGHT/2 - canvH/2 + "px";
+			canv.style.left = WIDTH/2 - getCanvDims().w/2 + "px";
+			canv.style.top = HEIGHT/2 - getCanvDims().h/2 + "px";
 		} else {// Peripheral canvases
 			ctx.fillStyle = "#000000";
 			canv.classList.add("tokenCanv");
 			theta = (canvIdx-1)*2*Math.PI/nCanvs+ startTheta;
-			canv.style.left = WIDTH/2 + Math.round(radius*Math.cos(theta) - canvW/2) + "px";
-			canv.style.top = HEIGHT/2 + Math.round(radius*Math.sin(theta) - canvH/2) + "px";
+			canv.style.left = WIDTH/2 + Math.round(radius*Math.cos(theta) - getCanvDims().w/2) + "px";
+			canv.style.top = HEIGHT/2 + Math.round(radius*Math.sin(theta) - getCanvDims().h/2) + "px";
 		}
 		document.body.appendChild(canv);
 		canvs.push(canv);
@@ -382,11 +380,11 @@ function hideAll(){
 	for(i = 0; i < canvs.length; i++){
 		canvs[i].style.cursor = "none";
 		if(i == 0) { // Middle canvas
-			ctxs[i].clearRect(0,0,canvW,canvH);
+			ctxs[i].clearRect(0,0,getCanvDims().w,getCanvDims().h);
 		} else { // Peripheral canvases
 			canvs[i].style.border = canvasBorderWidth + "px solid #000000";
 			ctxs[i].fillStyle = "#000000";
-			ctxs[i].fillRect(0,0,canvW,canvH);
+			ctxs[i].fillRect(0,0,getCanvDims().w,getCanvDims().h);
 		}
 	}
 }
@@ -425,7 +423,7 @@ function token(cP,style) {
 			ctx.fillStyle = currSubToken.colour;
 			for(pxlIdx = 0; pxlIdx < xSize*ySize; pxlIdx++){
 				if(currSubToken.colouredPixels[pxlIdx]){
-					ctx.fillRect(currSubToken.Xs[pxlIdx],currSubToken.Ys[pxlIdx],tokenPxlSz[0],tokenPxlSz[1]);
+					ctx.fillRect(currSubToken.Xs[pxlIdx],currSubToken.Ys[pxlIdx],getTokenPixelDims().w,getTokenPixelDims().h);
 				}
 			}
 		}
@@ -436,10 +434,10 @@ function subToken(Idx,colour,xSize,ySize,filledProp,symmetry){
 	this.Xs = [];
 	var i;
 	for(i = 0; i < xSize; i++) this.Xs = this.Xs.concat([...Array(ySize)].fill(i));
-	this.Xs = this.Xs.map(x => canvW/2 + tokenPxlSz[0]*(x + [-xSize,-xSize,0,0][Idx]));
+	this.Xs = this.Xs.map(x => getCanvDims().w/2 + getTokenPixelDims().w*(x + [-xSize,-xSize,0,0][Idx]));
 	this.Ys = [...Array(ySize).keys()];
 	while(this.Ys.length < xSize*ySize) this.Ys = this.Ys.concat([...Array(ySize).keys()]);
-	this.Ys = this.Ys.map(x => canvH/2 + tokenPxlSz[1]*(x + [-ySize,0,-ySize,0][Idx]));
+	this.Ys = this.Ys.map(x => getCanvDims().h/2 + getTokenPixelDims().h*(x + [-ySize,0,-ySize,0][Idx]));
     this.Xs = this.Xs.map(x => Math.round(x));
     this.Ys = this.Ys.map(x => Math.round(x));
 	this.colour = colour;
@@ -582,4 +580,19 @@ function getSymInds(dim1,dim2,ind,sym){
 	var newInd1 = sub2ind(dim1,[newM,oriN]) - 1;
 	var newInd2 = sub2ind(dim1,[oriM,newN]) - 1;
 	return [newInd1,newInd2];
+}
+
+function getScreenDims() {
+    return {h: masterDiv.clientHeight, w:masterDiv.clientWidth};
+}
+
+function getCanvDims() {
+    screenDims = getScreenDims();
+    return {h: Math.ceil(0.18*screenDims.h), w: Math.ceil(0.15*screenDims.w)};
+}
+
+function getTokenPixelDims() {
+    var canvDims = getCanvDims();
+    var D = Math.ceil(Math.min(canvDims.h, canvDims.w)/12);
+    return {h: D, w: D};
 }

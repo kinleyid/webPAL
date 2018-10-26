@@ -1,8 +1,9 @@
-.bigBr {
-	visibility: hidden;
-	line-height: 25vh;
-	margin-top: 0;
-	margin-bottom: 0;
+#masterDiv {
+    position: fixed;
+    top: 0%;
+    left: 0%;
+    height: 100%;
+    width: 100%;
 }
 .testCanv {
 	border: 0px;
@@ -35,6 +36,9 @@ p {
 	font-size: 4vmin;
 }
 .score {
+    position: absolute;
+    top: 2%;
+    left: 2%;
 	font-family: verdana;
 	font-size: 4vmin;
 	visibility: hidden;
