@@ -17,11 +17,11 @@ var startTheta = 0; //Math.PI/2;
 var masterTrialwise_nTokens = [1,2,3,3,6,8];// Each element is the number of targets to show for a trial
 var masterTrialwise_nCanvs = [6,6,6,6,6,8];// Number of places for tokens to appear
 var nTokenFrames = 180;
-var tokenMs = 3000;
+var tokenMs = 300;
 var presentationTime;
 var reactionTimes = [];
 var nBlanksBetweenTokens = 30;
-var interTokenMs = 500;
+var interTokenMs = 0;
 var nBlanksAfterLastToken = 30;
 var postTrialMs = 500;
 var nInitialBlankFrames = 60;
@@ -98,19 +98,30 @@ var masterStyles = [[1,1,1,"both",2],
 					[5,5,0.2,"cross",2],
 					[4,3,0.2,"both",1]];
 
+var ALL = document.getElementsByTagName("html")[0];
 var instructions = document.getElementById('instructions');
 var masterDiv = document.getElementById('masterDiv');
-function startPractice() {
+
+function start() {
+    if (gamify) {
+        score = 0;
+        document.getElementById("score").style.visibility = "hidden";
+    }
     tryCount = 0;
     trialCount = 0;
-	document.getElementById("instructions").style.display = "none";
-	trialwise_nTokens = practice_nTokens;
-	trialwise_nCanvs = practice_nCanvs;
+    instructions.style.display = 'none';
+    if (isPractice) {
+        trialwise_nTokens = practice_nTokens;
+        trialwise_nCanvs = practice_nCanvs;
+    } else {
+        trialwise_nTokens = masterTrialwise_nTokens;
+        trialwise_nCanvs = masterTrialwise_nCanvs;
+    }
+    initialize();
     setGeometry();
-    initialize()
-	createCanvs()
-	hideAll()
-    setTimeout(showToken, preTrialMs);
+    createCanvs();
+	hideAll();
+    preTrial();
 }
 
 function setGeometry() {
@@ -126,7 +137,9 @@ function setGeometry() {
 }
 
 function intermediaryScreen() {
-	if(gamify){
+	isPractice = false;
+    ALL.style.cursor = 'default';
+    if(gamify){
 		score = 0;
 		document.getElementById("score").innerHTML = "Score: " + score;
 		document.getElementById("score").style.visibility = "visible";
@@ -135,32 +148,8 @@ function intermediaryScreen() {
 	document.getElementById("instructions").innerHTML = "<p class='dialog'>That was the end of the practice round.<br/>\
                                                          Click to start the game for real<br/>\
                                                          (Unlike in the practice round, you won't get unlimited retries):</p>\
-                                                         <button id='startButton' onclick='startForReal()'>Start game</button>";
+                                                         <button id='startButton' onclick='start()'>Start game</button>";
 	document.getElementById("instructions").style.display = "block";
-}
-
-function startForReal() {
-	document.getElementById("score").style.visibility = "hidden";
-	document.getElementById("instructions").style.display = "none";
-	trialwise_nTokens = masterTrialwise_nTokens;
-	trialwise_nCanvs = masterTrialwise_nCanvs;
-    setGeometry();
-	createCanvs();
-	hideAll();
-	trialCount = 0;
-	score = 0;
-    tryCount = 0;
-	isPractice = false;
-	initialize();
-	if (nInitialTextFrames > 0) {
-        ctxs[0].fillStyle = "#000000";
-        ctxs[0].textAlign="center";
-        ctxs[0].font="2vw Verdana";
-        ctxs[0].fillText(trialwise_nTokens[trialCount] + " shape" + (trialwise_nTokens[trialCount]>1?"s":"") + " now",getCanvDims().w/2,getCanvDims().h/2); 
-        ctxs[0].clearRect(0,0,getCanvDims().w, getCanvDims().h);
-    } else {
-        setTimeout(showToken, preTrialMs);
-    }
 }
 
 function showToken(){
@@ -183,14 +172,11 @@ function showToken(){
 
 function testToken(){
 	noClicks = false;
-	document.getElementsByTagName("html")[0].style.cursor = "default";
-	var canvIdx;
-	for(canvIdx = 0; canvIdx < canvs.length; canvIdx++){
-		if(canvIdx == 0) {
-			canvs[canvIdx].style.cursor = "default";
-		} else {
-			canvs[canvIdx].style.cursor = "pointer";
-		}
+    ALL.style.cursor = "default";
+    canvs[0].style.cursor = "default";
+    var canvIdx;
+	for(canvIdx = 1; canvIdx < canvs.length; canvIdx++){
+        canvs[canvIdx].style.cursor = "pointer";
 	}
 	ctxs[0].clearRect(0,0,getCanvDims().w,getCanvDims().h);
 	tokens[trialCount][testingOrder[trialCount][canvCount]].draw(ctxs[0]);
@@ -313,18 +299,7 @@ function nextTrial(){
     } else if (trialCount == trialwise_nTokens.length || tryCount == nTries) {
         saveData();
     } else {
-        if (nInitialTextFrames > 0 && trialwise_nTokens[trialCount-1] && trialwise_nTokens[trialCount] != trialwise_nTokens[trialCount-1] && tryCount == 0) {
-            ctxs[0].fillStyle = "#000000";
-            ctxs[0].textAlign="center";
-            ctxs[0].font="2vw Verdana";
-            ctxs[0].fillText(trialwise_nTokens[trialCount] + " shape" + (trialwise_nTokens[trialCount]>1?"s":"") + " now",getCanvDims().w/2,getCanvDims().h/2); 
-            setTimeout(function() {
-                ctxs[0].clearRect(0,0,getCanvDims().w,getCanvDims().h);
-                setTimeout(showToken, preTrialMs);
-            }, preTrialTextMs);
-        } else {
-            setTimeout(showToken, preTrialMs);
-        }
+        preTrial();
     }
     if(tryCount == nTries){
         tryCount = 0; // Why is this necessary?
@@ -595,4 +570,19 @@ function getTokenPixelDims() {
     var canvDims = getCanvDims();
     var D = Math.ceil(Math.min(canvDims.h, canvDims.w)/12);
     return {h: D, w: D};
+}
+
+function preTrial() {
+    if (nInitialTextFrames > 0 && trialwise_nTokens[trialCount-1] && trialwise_nTokens[trialCount] != trialwise_nTokens[trialCount-1] && tryCount == 0) {
+        ctxs[0].fillStyle = "#000000";
+        ctxs[0].textAlign="center";
+        ctxs[0].font="2vw Verdana";
+        ctxs[0].fillText(trialwise_nTokens[trialCount] + " shape" + (trialwise_nTokens[trialCount]>1?"s":"") + " now",getCanvDims().w/2,getCanvDims().h/2); 
+        setTimeout(function() {
+            ctxs[0].clearRect(0,0,getCanvDims().w,getCanvDims().h);
+            setTimeout(showToken, preTrialMs);
+        }, preTrialTextMs);
+    } else {
+        setTimeout(showToken, preTrialMs);
+    }
 }
