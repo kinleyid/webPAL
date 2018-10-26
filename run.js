@@ -22,10 +22,15 @@ var nTokenFrames = 180;
 var presentationTime;
 var reactionTimes = [];
 var nBlanksBetweenTokens = 30;
+var interTokenMs = 500;
 var nBlanksAfterLastToken = 30;
+var postTrialMs = 500;
 var nInitialBlankFrames = 60;
+var preTrialTextMs = 1000;
+var preTrialMs = 1000;
 var nInitialTextFrames = 120;
 var nFeedbackFrames = 120; 
+var feedbackMs = 2000;
 var nIncorrectFrames = 120; // Number of frames subject is told they are incorrect and to try again
 var filledProb = 0.2;//0.35;//6/9;
 var tokenPxlSz = [Math.round(canvH/12),Math.round(canvH/12)]; // Size of token pixels in real pixels [width,height]
@@ -110,14 +115,7 @@ function startPractice() {
     initialize()
 	createCanvs()
 	hideAll()
-	if(nInitialBlankFrames > 0){
-		window.requestAnimationFrame(function(){wait(nInitialBlankFrames,showToken)});
-	}
-	else window.requestAnimationFrame(showToken);
-}
-
-function intermediaryScreen(){
-	document.getElementsByTagName("html")[0].style.cursor = "default";
+    setTimeout(showToken, preTrialMs);
 	if(gamify){
 		score = 0;
 		document.getElementById("score").innerHTML = "Score: " + score;
@@ -151,52 +149,33 @@ function startForReal() {
     tryCount = 0;
 	isPractice = false;
 	initialize();
-	if(nInitialTextFrames > 0){
+	if (nInitialTextFrames > 0) {
         ctxs[0].fillStyle = "#000000";
         ctxs[0].textAlign="center";
         ctxs[0].font="2vw Verdana";
         ctxs[0].fillText(trialwise_nTokens[trialCount] + " shape" + (trialwise_nTokens[trialCount]>1?"s":"") + " now",canvW/2,canvH/2); 
-		window.requestAnimationFrame(function(){wait(nInitialTextFrames,function(){
-            ctxs[0].clearRect(0,0,canvW,canvH);
-            if(nInitialBlankFrames > 0){
-                window.requestAnimationFrame(function(){wait(nInitialBlankFrames,showToken)});
-            } else {
-                window.requestAnimationFrame(showToken);
-            }})});
-	} else if(nInitialBlankFrames > 0){
-        window.requestAnimationFrame(function(){wait(nInitialBlankFrames,showToken)});
+        ctxs[0].clearRect(0,0,canvW,canvH);
     } else {
-        window.requestAnimationFrame(showToken);
+        setTimeout(showToken, preTrialMs);
     }
 }
 
 function showToken(){
-	if(masterFrameCount == nTokenFrames - 1) {
-		masterFrameCount = 0;
+    ctxs[showingOrder[trialCount][canvCount]].clearRect(0,0,canvW,canvH);
+    if(tokens[trialCount][showingOrder[trialCount][canvCount]] != null){
+        tokens[trialCount][showingOrder[trialCount][canvCount]].draw(ctxs[showingOrder[trialCount][canvCount]]);
+    }
+    setTimeout(function() {
 		ctxs[showingOrder[trialCount][canvCount]].fillStyle = "#000000";
 		ctxs[showingOrder[trialCount][canvCount]].fillRect(0,0,canvW,canvH);
 		canvCount++;
 		if(canvCount == trialwise_nCanvs[trialCount]){
 			canvCount = 0;
-			if(nBlanksAfterLastToken > 0){
-				window.requestAnimationFrame(function(){wait(nBlanksAfterLastToken,testToken)});
-			}
-			else window.requestAnimationFrame(testToken);
+            setTimeout(testToken, postTrialMs);
 		} else {
-			if(nBlanksBetweenTokens > 0){
-				window.requestAnimationFrame(function(){wait(nBlanksBetweenTokens,showToken)});
-			}
-			else window.requestAnimationFrame(showToken);
-		}
-		return;
-	} else if(masterFrameCount == 0){//Clear canvas and draw token if there is one
-		ctxs[showingOrder[trialCount][canvCount]].clearRect(0,0,canvW,canvH);
-		if(tokens[trialCount][showingOrder[trialCount][canvCount]] != null){
-			tokens[trialCount][showingOrder[trialCount][canvCount]].draw(ctxs[showingOrder[trialCount][canvCount]]);
+            setTimeout(showToken, interTokenMs);
 		}
 	}
-	masterFrameCount++;
-	window.requestAnimationFrame(showToken);
 }
 
 function testToken(){
@@ -244,7 +223,9 @@ function animateMiddleCanv(idx){
 		canvs[0].style.top = topPos + "px";
 		ctxs[0].globalAlpha *= animationRate;
 		tokens[trialCount][testingOrder[trialCount][canvCount]].draw(ctxs[0]);
-		window.requestAnimationFrame(function(){animateMiddleCanv(idx)});
+        setTimeout(function() {
+            animateMiddleCanv(idx);
+        }, 1000/60);
 	}
 }
 
@@ -267,29 +248,22 @@ function nextTest(){
 				correct = false; break;
 			}
 		}
-		if(correct){
-            tryCount = 0;
-			if(gamify){
-				feedbackScreen();
-                window.requestAnimationFrame(function(){wait(nFeedbackFrames,nextTrial)});
-			}
-		} else {
-            tryCount++;
-            if(!isPractice && tryCount == nTries){
-                feedbackScreen();
-                window.requestAnimationFrame(function(){wait(nFeedbackFrames,nextTrial)});
-            } else {
-                ctxs[0].fillStyle = "#000000";
-                ctxs[0].textAlign="center";
-                ctxs[0].font="2vw Verdana";
-                ctxs[0].fillText("Try again",canvW/2,canvH/2); 
-                canvCount = 0;
-                showingOrder[trialCount] = sample(showingOrder[trialCount],1,showingOrder[trialCount].length).map(x=>x[0]);
-                testingOrder[trialCount] = sample(testingOrder[trialCount],1,testingOrder[trialCount].length).map(x=>x[0]);
-                trialCount--; // Has to be done because nextTrial increments trialCount
-                window.requestAnimationFrame(function(){wait(nIncorrectFrames,nextTrial)});
-            }
-		}
+        if (isPractice && !correct) {
+            trialCount--; // Retry
+        } else {
+            tryCount = correct ? 0 : tryCount + 1;
+        }
+        if (tryCount < nTries) {
+            ctxs[0].fillStyle = "#000000";
+            ctxs[0].textAlign="center";
+            ctxs[0].font="2vw Verdana";
+            ctxs[0].fillText("Try again",canvW/2,canvH/2); 
+            canvCount = 0;
+            showingOrder[trialCount] = sample(showingOrder[trialCount],1,showingOrder[trialCount].length).map(x=>x[0]);
+            testingOrder[trialCount] = sample(testingOrder[trialCount],1,testingOrder[trialCount].length).map(x=>x[0]);
+        }
+        feedbackScreen();
+        setTimeout(nextTrial, feedbackMs);
 	} else {
 		testToken();
 	}
@@ -334,54 +308,27 @@ function nextTrial(){
 	createCanvs();
 	hideAll()
 	document.getElementById("score").style.visibility = "hidden";
-    if(isPractice){
-        if(trialCount == trialwise_nTokens.length){
-            trialCount = 0;
-			intermediaryScreen();
-        } else {
-            if(nInitialTextFrames > 0 && trialwise_nTokens[trialCount-1] && trialwise_nTokens[trialCount] != trialwise_nTokens[trialCount-1] && tryCount == 0){
-                ctxs[0].fillStyle = "#000000";
-                ctxs[0].textAlign="center";
-                ctxs[0].font="2vw Verdana";
-                ctxs[0].fillText(trialwise_nTokens[trialCount] + " shape" + (trialwise_nTokens[trialCount]>1?"s":"") + " now",canvW/2,canvH/2); 
-                window.requestAnimationFrame(function(){wait(nInitialTextFrames,function(){
-                    ctxs[0].clearRect(0,0,canvW,canvH);
-                    if(nInitialBlankFrames > 0){
-                        window.requestAnimationFrame(function(){wait(nInitialTextFrames,showToken)})
-                    } else {
-                        window.requestAnimationFrame(showToken);
-                    }})});
-            } else if(nInitialBlankFrames > 0){
-                window.requestAnimationFrame(function(){wait(nInitialBlankFrames,showToken)});
-            } else {
-                window.requestAnimationFrame(showToken);
-            }
-        }
+    if (isPractice && trialCount == trialwise_nTokens.length) {
+        trialCount = 0;
+        intermediaryScreen();
+    } else if (trialCount == trialwise_nTokens.length || tryCount == nTries) {
+        saveData();
     } else {
-        if(trialCount == trialwise_nTokens.length || tryCount == nTries){
-            saveData();
+        if (nInitialTextFrames > 0 && trialwise_nTokens[trialCount-1] && trialwise_nTokens[trialCount] != trialwise_nTokens[trialCount-1] && tryCount == 0) {
+            ctxs[0].fillStyle = "#000000";
+            ctxs[0].textAlign="center";
+            ctxs[0].font="2vw Verdana";
+            ctxs[0].fillText(trialwise_nTokens[trialCount] + " shape" + (trialwise_nTokens[trialCount]>1?"s":"") + " now",canvW/2,canvH/2); 
+            setTimeout(function() {
+                ctxs[0].clearRect(0,0,canvW,canvH);
+                setTimeout(showToken, preTrialMs);
+            }, preTrialTextMs);
         } else {
-            if(nInitialTextFrames > 0 && trialwise_nTokens[trialCount-1] && trialwise_nTokens[trialCount] != trialwise_nTokens[trialCount-1] && tryCount == 0){
-                ctxs[0].fillStyle = "#000000";
-                ctxs[0].textAlign="center";
-                ctxs[0].font="2vw Verdana";
-                ctxs[0].fillText(trialwise_nTokens[trialCount] + " shape" + (trialwise_nTokens[trialCount]>1?"s":"") + " now",canvW/2,canvH/2); 
-                window.requestAnimationFrame(function(){wait(nInitialTextFrames,function(){
-                    ctxs[0].clearRect(0,0,canvW,canvH);
-                    if(nInitialBlankFrames > 0){
-                        window.requestAnimationFrame(function(){wait(nInitialTextFrames,showToken)})
-                    } else {
-                        window.requestAnimationFrame(showToken);
-                    }})});
-            } else if(nInitialBlankFrames > 0){
-                window.requestAnimationFrame(function(){wait(nInitialBlankFrames,showToken)});
-            } else {
-                window.requestAnimationFrame(showToken);
-            }
+            setTimeout(showToken, preTrialMs);
         }
     }
     if(tryCount == nTries){
-        tryCount = 0;
+        tryCount = 0; // Why is this necessary?
     }
 }
 
