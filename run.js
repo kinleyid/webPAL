@@ -19,6 +19,7 @@ var startTheta = 0; //Math.PI/2;
 var masterTrialwise_nTokens = [1,2,3,3,6,8];// Each element is the number of targets to show for a trial
 var masterTrialwise_nCanvs = [6,6,6,6,6,8];// Number of places for tokens to appear
 var nTokenFrames = 180;
+var tokenMs = 3000;
 var presentationTime;
 var reactionTimes = [];
 var nBlanksBetweenTokens = 30;
@@ -121,7 +122,6 @@ function startPractice() {
 		document.getElementById("score").innerHTML = "Score: " + score;
 		document.getElementById("score").style.visibility = "visible";
 	}
-	
 	removeCanvs();
 	document.getElementById("instructions").innerHTML = "<p class='dialog'>That was the end of the practice round.<br/>\
                                                          Click to start the game for real<br/>\
@@ -175,7 +175,7 @@ function showToken(){
 		} else {
             setTimeout(showToken, interTokenMs);
 		}
-	}
+	}, tokenMs);
 }
 
 function testToken(){
