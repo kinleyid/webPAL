@@ -117,6 +117,9 @@ function startPractice() {
 	createCanvs()
 	hideAll()
     setTimeout(showToken, preTrialMs);
+}
+
+function intermediaryScreen() {
 	if(gamify){
 		score = 0;
 		document.getElementById("score").innerHTML = "Score: " + score;
