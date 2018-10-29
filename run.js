@@ -1,17 +1,7 @@
 
-var decoded = decodeURIComponent(window.location.search);
-var pID = decoded.substring(decoded.indexOf('=')+1);
-var filename = pID + "PAL";
+var filename; // Decide here how to name the file
 
-// Glossary:
-// "Tokens" are the little images
-// "Canvs" are the canvases
-
-var HEIGHT = screen.availHeight;
-var WIDTH = screen.availWidth;
 var radius;
-var nCanvs = 6;// Number of peripheral canvases
-var nTokenTypes = 100;
 var startTheta = 0; //Math.PI/2;
 // NOTE: no elements in nTargs can exceed nCanvs
 var masterTrialwise_nTokens = [1,2,3,3,6,8];// Each element is the number of targets to show for a trial
@@ -21,7 +11,7 @@ var tokenMs = 300;
 var presentationTime;
 var reactionTimes = [];
 var nBlanksBetweenTokens = 30;
-var interTokenMs = 0;
+var interTokenMs = 500;
 var nBlanksAfterLastToken = 30;
 var postTrialMs = 500;
 var nInitialBlankFrames = 60;
@@ -54,7 +44,7 @@ var showingOrder;
 var testingOrder;
 var indicesOfTokens;
 var RESPs = [];
-var outputText = "Trial,IndicesOfBoxesContainingTokens,OrderBoxesOpened,OrderBoxesTested,SubjectAnswers,TokenJSONS,TokenStyles,ReactionTimes,NewLine,";
+var outputText = "Trial,IndicesOfBoxesContainingTokens,OrderBoxesOpened,OrderBoxesTested,SubjectAnswers,TokenStyles,ReactionTimes,NewLine,";
 var masterCanvIdx;
 var nPointsPerCorrect = 50;
 var noClicks = true;
@@ -226,7 +216,6 @@ function nextTest(){
 					  showingOrder[trialCount].toString().replace(/,/g,'-') + "," +
 					  testingOrder[trialCount].toString().replace(/,/g,'-') + "," +
 					  RESPs.toString().replace(/,/g,'-') + "," +
-                      "~" + tokens[trialCount].map(x => JSON.stringify(x)).join('ISAACSAYSJSONSPLIT') + "~," +
                       "~" + tokens[trialCount].map(x => x==null?"_":x.style).join('-') + "~," +
                       reactionTimes.toString().replace(/,/g,'-') + "," +
                       "NewLine,";
