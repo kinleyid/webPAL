@@ -7,7 +7,7 @@ var startTheta = 0; //Math.PI/2;
 var masterTrialwise_nTokens = [1,2,3,3,6,8];// Each element is the number of targets to show for a trial
 var masterTrialwise_nCanvs = [6,6,6,6,6,8];// Number of places for tokens to appear
 var nTokenFrames = 180;
-var tokenMs = 300;
+var tokenMs = 3000;
 var presentationTime;
 var reactionTimes = [];
 var nBlanksBetweenTokens = 30;
@@ -15,11 +15,12 @@ var interTokenMs = 500;
 var nBlanksAfterLastToken = 30;
 var postTrialMs = 500;
 var nInitialBlankFrames = 60;
-var preTrialTextMs = 1000;
+var preTrialTextMs = 2000;
 var preTrialMs = 1000;
 var nInitialTextFrames = 120;
 var nFeedbackFrames = 120; 
 var feedbackMs = 2000;
+var postTestMs = 500;
 var nIncorrectFrames = 120; // Number of frames subject is told they are incorrect and to try again
 var filledProb = 0.2;//0.35;//6/9;
 // var tokenPxlSz = [Math.round(getCanvDims().h/12),Math.round(getCanvDims().h/12)]; // Size of token pixels in real pixels [width,height]
@@ -29,14 +30,14 @@ var fPropRange = [0.4,0.45,0.5];
 var canvasBorderWidth = 3;
 var score = 0;
 var nColoursPerToken = 2;
-var gamify = true;
+var gamify = false;
 var practice_nTokens = [1,2];
 var practice_nCanvs = [6,6];
 var nTries = 3, tryCount;
 var stim;
 var masterFrameCount = 0;// How many frames there have been
 var canvCount = 0;// How many canvases have been shown within a trial
-var trialCount = 0;// How many trials there have been
+var trialCount, nextTrialCount;// How many trials there have been
 var canvs = [];
 var ctxs = [];
 var tokens;
@@ -91,14 +92,18 @@ var masterStyles = [[1,1,1,"both",2],
 var ALL = document.getElementsByTagName("html")[0];
 var instructions = document.getElementById('instructions');
 var masterDiv = document.getElementById('masterDiv');
+if (gamify) {
+    var scoreArea = document.getElementById("score");
+    scoreArea.style.visibility = 'visible';
+}
 
 function start() {
     if (gamify) {
         score = 0;
-        document.getElementById("score").style.visibility = "hidden";
+        scoreArea.style.visibility = "hidden";
     }
     tryCount = 0;
-    trialCount = 0;
+    nextTrialCount = 0;
     instructions.style.display = 'none';
     if (isPractice) {
         trialwise_nTokens = practice_nTokens;
@@ -108,9 +113,6 @@ function start() {
         trialwise_nCanvs = masterTrialwise_nCanvs;
     }
     initialize();
-    setGeometry();
-    createCanvs();
-	hideAll();
     preTrial();
 }
 
@@ -131,8 +133,8 @@ function intermediaryScreen() {
     ALL.style.cursor = 'default';
     if(gamify){
 		score = 0;
-		document.getElementById("score").innerHTML = "Score: " + score;
-		document.getElementById("score").style.visibility = "visible";
+		scoreArea.textContent = "Score: " + score;
+		scoreArea.style.visibility = "visible";
 	}
 	removeCanvs();
 	document.getElementById("instructions").innerHTML = "<p class='dialog'>That was the end of the practice round.<br/>\
@@ -142,7 +144,7 @@ function intermediaryScreen() {
 	document.getElementById("instructions").style.display = "block";
 }
 
-function showToken(){
+function showToken() {
     ctxs[showingOrder[trialCount][canvCount]].clearRect(0,0,getCanvDims().w,getCanvDims().h);
     if(tokens[trialCount][showingOrder[trialCount][canvCount]] != null){
         tokens[trialCount][showingOrder[trialCount][canvCount]].draw(ctxs[showingOrder[trialCount][canvCount]]);
@@ -160,7 +162,7 @@ function showToken(){
 	}, tokenMs);
 }
 
-function testToken(){
+function testToken() {
 	noClicks = false;
     ALL.style.cursor = "default";
     canvs[0].style.cursor = "default";
@@ -173,7 +175,7 @@ function testToken(){
     presentationTime = performance.now();
 }
 
-function evaluateSelection(event){
+function evaluateSelection(event) {
 	if(noClicks){// In case the user accidentally clicks
 		return
 	}
@@ -183,7 +185,7 @@ function evaluateSelection(event){
 	animateMiddleCanv(event.target.Idx);
 }
 
-function animateMiddleCanv(idx){
+function animateMiddleCanv(idx) {
 	ctxs[0].clearRect(0, 0, getCanvDims().w, getCanvDims().h);
 	var animationRate = 0.8;
 	var leftPos = parseInt(canvs[0].style.left);
@@ -208,7 +210,7 @@ function animateMiddleCanv(idx){
 	}
 }
 
-function nextTest(){
+function nextTest() {
 	canvCount++;
 	if(canvCount == testingOrder[trialCount].length){
 		outputText += (isPractice? 0 : trialCount+1) + "," +
@@ -219,34 +221,49 @@ function nextTest(){
                       "~" + tokens[trialCount].map(x => x==null?"_":x.style).join('-') + "~," +
                       reactionTimes.toString().replace(/,/g,'-') + "," +
                       "NewLine,";
-		var tokenIdx, correct = true;
-        reactionTimes = []
-		for(tokenIdx = 0; tokenIdx < testingOrder[trialCount].length; tokenIdx++){
-			if(testingOrder[trialCount][tokenIdx] != RESPs[tokenIdx]){
-				correct = false; break;
-			}
-		}
-        if (isPractice && !correct) {
-            tryCount--; // Retry
-        } else {
-            tryCount = correct ? 0 : tryCount + 1;
-        }
-        if (!correct && tryCount < nTries) {
-            ctxs[0].fillStyle = "#000000";
-            ctxs[0].textAlign="center";
-            ctxs[0].font="2vw Verdana";
-            ctxs[0].fillText("Try again",getCanvDims().w/2,getCanvDims().h/2); 
-            canvCount = 0;
-            showingOrder[trialCount] = sample(showingOrder[trialCount],1,showingOrder[trialCount].length).map(x=>x[0]);
-            testingOrder[trialCount] = sample(testingOrder[trialCount],1,testingOrder[trialCount].length).map(x=>x[0]);
-            trialCount--;
-        } else {
-            feedbackScreen();
-        }
-        setTimeout(nextTrial, feedbackMs);
+		reactionTimes = [];
+        postTestControlFcn();
 	} else {
 		testToken();
 	}
+}
+
+function postTestControlFcn() {
+    var tokenIdx, correct = true;
+    for (tokenIdx = 0; tokenIdx < testingOrder[trialCount].length; tokenIdx++) { // All correct?
+        if (testingOrder[trialCount][tokenIdx] != RESPs[tokenIdx]) {
+            correct = false;
+            break;
+        }
+    }
+    tryCount = correct ? 0 : tryCount + 1;
+    var nextFunc;
+    if (correct) { // Next trial
+        nextTrialCount = trialCount + 1;
+        if (nextTrialCount == trialwise_nTokens.length) {
+            if (isPractice) {
+                nextFunc = intermediaryScreen;
+            } else {
+                nextFunc = saveData;
+            }
+        } else {
+            nextFunc = preTrial;
+        }
+        if (gamify) {
+            feedbackScreen();
+            setTimeout(nextFunc, feedbackMs);
+        } else {
+            setTimeout(nextFunc, postTestMs);
+        }
+    } else {
+        if (tryCount < nTries || isPractice) { // Retry
+            showingOrder[trialCount] = sample(showingOrder[trialCount],1,showingOrder[trialCount].length).map(x=>x[0]);
+            testingOrder[trialCount] = sample(testingOrder[trialCount],1,testingOrder[trialCount].length).map(x=>x[0]);
+            setTimeout(preTrial, postTestMs);
+        } else {
+            setTimeout(saveData, postTestMs);
+        }
+    }
 }
 
 function feedbackScreen(){
@@ -263,36 +280,14 @@ function feedbackScreen(){
 			canvs[canvIdx].style.border = canvasBorderWidth + "px solid " + canvColour;
 		}
 	}
-	document.getElementById("score").style.visibility = "visible";
+	scoreArea.style.visibility = "visible";
 	var i;
-	for(i = 0; i < nNewPoints; i++){
-		setTimeout(function(){score += nPointsPerCorrect;
-							  document.getElementById("score").innerHTML ="Score: "+score;},
-							  Math.floor(nFeedbackFrames*1000/60/8) + 
-							  i*Math.floor(nFeedbackFrames*1000/60/20));
+	for (i = 0; i < nNewPoints; i++) {
+		setTimeout(function(){
+            score += nPointsPerCorrect;
+			scoreArea.textContent = "Score: " + score;
+        }, Math.floor(feedbackMs/8) + i*Math.floor(feedbackMs/20));
 	}
-}
-
-function nextTrial(){
-	trialCount++;
-	canvCount = 0;
-	RESPs = [];
-    setGeometry();
-	removeCanvs();
-	createCanvs();
-	hideAll()
-	document.getElementById("score").style.visibility = "hidden";
-    if (isPractice && trialCount == trialwise_nTokens.length) {
-        trialCount = 0;
-        intermediaryScreen();
-    } else if (trialCount == trialwise_nTokens.length || tryCount == nTries) {
-        saveData();
-    } else {
-        preTrial();
-    }
-    if(tryCount == nTries){
-        tryCount = 0; // Why is this necessary?
-    }
 }
 
 function removeCanvs() {
@@ -562,16 +557,36 @@ function getTokenPixelDims() {
 }
 
 function preTrial() {
-    if (nInitialTextFrames > 0 && trialwise_nTokens[trialCount-1] && trialwise_nTokens[trialCount] != trialwise_nTokens[trialCount-1] && tryCount == 0) {
+    trialCount = nextTrialCount;
+	canvCount = 0;
+	RESPs = [];
+    setGeometry();
+	removeCanvs();
+	createCanvs();
+	hideAll();
+    if (gamify) {
+        scoreArea.style.visibility = "hidden";
+    }
+    if (trialCount == 0 && tryCount == 0) {
+        setTimeout(showToken, preTrialMs);
+    } else {
+        var canvText;
         ctxs[0].fillStyle = "#000000";
         ctxs[0].textAlign="center";
         ctxs[0].font="2vw Verdana";
-        ctxs[0].fillText(trialwise_nTokens[trialCount] + " shape" + (trialwise_nTokens[trialCount]>1?"s":"") + " now",getCanvDims().w/2,getCanvDims().h/2); 
+        if (tryCount == 0) {
+            if (trialwise_nTokens[trialCount-1] && trialwise_nTokens[trialCount] != trialwise_nTokens[trialCount-1]) {
+                canvText = trialwise_nTokens[trialCount] + " shape" + (trialwise_nTokens[trialCount]>1?"s":"") + " now"; 
+            } else {
+                canvText = 'Next trial';
+            }
+        } else {
+            canvText = 'Try again';
+        }
+        ctxs[0].fillText(canvText, getCanvDims().w/2, getCanvDims().h/2); 
         setTimeout(function() {
             ctxs[0].clearRect(0,0,getCanvDims().w,getCanvDims().h);
             setTimeout(showToken, preTrialMs);
         }, preTrialTextMs);
-    } else {
-        setTimeout(showToken, preTrialMs);
     }
 }
