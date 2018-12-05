@@ -45,7 +45,7 @@ var showingOrder;
 var testingOrder;
 var indicesOfTokens;
 var RESPs = [];
-var outputText = "Trial,IndicesOfBoxesContainingTokens,OrderBoxesOpened,OrderBoxesTested,SubjectAnswers,TokenStyles,ReactionTimes,NewLine,";
+var outputText = "Trial,AttemptN,IndicesOfBoxesContainingTokens,OrderBoxesOpened,OrderBoxesTested,SubjectAnswers,TokenStyles,ReactionTimes,NewLine,";
 var masterCanvIdx;
 var nPointsPerCorrect = 50;
 var noClicks = true;
@@ -214,6 +214,7 @@ function nextTest() {
 	canvCount++;
 	if(canvCount == testingOrder[trialCount].length){
 		outputText += (isPractice? 0 : trialCount+1) + "," +
+                      tryCount + "," +
 					  tokens[trialCount].slice(1).map(x => x!=null?tokens[trialCount].indexOf(x):0).filter(x => x != 0).toString().replace(/,/g,'-') + "," +
 					  showingOrder[trialCount].toString().replace(/,/g,'-') + "," +
 					  testingOrder[trialCount].toString().replace(/,/g,'-') + "," +
