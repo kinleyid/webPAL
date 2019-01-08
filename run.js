@@ -323,8 +323,8 @@ function createCanvs(){
 			ctx.fillStyle = "#000000";
 			canv.classList.add("tokenCanv");
 			theta = (canvIdx-1)*2*Math.PI/nCanvs+ startTheta;
-			canv.style.left = WIDTH/2 + Math.round(radius*Math.cos(theta) - getCanvDims().w/2) + "px";
-			canv.style.top = HEIGHT/2 + Math.round(radius*Math.sin(theta) - getCanvDims().h/2) + "px";
+			canv.style.left = WIDTH/2 + Math.round(0.36*getScreenDims().w*Math.cos(theta) - getCanvDims().w/2) + "px";
+			canv.style.top = HEIGHT/2 + Math.round(0.36*getScreenDims().h*Math.sin(theta) - getCanvDims().h/2) + "px";
 		}
 		document.body.appendChild(canv);
 		canvs.push(canv);
@@ -368,6 +368,23 @@ function initialize(){
 		showingOrder.push(sample([...Array(nCanvs).keys()].map(x => x+1),1,nCanvs).map(x => x[0]));
 		testingOrder.push(sample(canvsWithTokens,1,canvsWithTokens.length).map(x => x[0]));
 	}
+}
+
+function saveData() {
+    xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+        if (xhttp.status == 200) {
+            textArea.style.display = 'none';
+            dialogArea.style.display = 'block';
+            dialogArea.textContent = 'Thank you!';
+        } else if(xhttp.status == 500) {
+            saveData();
+        }
+    };
+    xhttp.open("POST", "saveData.php", true);
+    xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    VarsToSend = "filename="+filename + "&txt="+outputText;
+    xhttp.send(VarsToSend);
 }
 
 function token(cP,style) {
@@ -548,7 +565,7 @@ function getScreenDims() {
 
 function getCanvDims() {
     screenDims = getScreenDims();
-    return {h: Math.ceil(0.18*screenDims.h), w: Math.ceil(0.15*screenDims.w)};
+    return {h: Math.ceil(0.18*screenDims.h), w: Math.ceil(0.16*screenDims.w)};
 }
 
 function getTokenPixelDims() {
