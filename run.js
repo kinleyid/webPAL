@@ -1,5 +1,8 @@
 
-var filename; // Decide here how to name the file
+// Get worker ID
+var decoded = decodeURIComponent(window.location.search);
+var pID = decoded.substring(decoded.indexOf('=')+1);
+var filename = pID + 'PAL';
 
 var radius;
 var startTheta = 0; //Math.PI/2;
@@ -33,7 +36,7 @@ var nColoursPerToken = 2;
 var gamify = false;
 var practice_nTokens = [1,2];
 var practice_nCanvs = [6,6];
-var nTries = 3, tryCount;
+var nTries = 10, tryCount;
 var stim;
 var masterFrameCount = 0;// How many frames there have been
 var canvCount = 0;// How many canvases have been shown within a trial
@@ -45,7 +48,7 @@ var showingOrder;
 var testingOrder;
 var indicesOfTokens;
 var RESPs = [];
-var outputText = "Trial,AttemptN,IndicesOfBoxesContainingTokens,OrderBoxesOpened,OrderBoxesTested,SubjectAnswers,TokenStyles,ReactionTimes,NewLine,";
+var outputText = "Trial,AttemptN,IndicesOfBoxesContainingTokens,OrderBoxesOpened,OrderBoxesTested,SubjectAnswers,TokenStyles,ReactionTimes\n";
 var masterCanvIdx;
 var nPointsPerCorrect = 50;
 var noClicks = true;
@@ -220,8 +223,7 @@ function nextTest() {
 					  testingOrder[trialCount].toString().replace(/,/g,'-') + "," +
 					  RESPs.toString().replace(/,/g,'-') + "," +
                       "~" + tokens[trialCount].map(x => x==null?"_":x.style).join('-') + "~," +
-                      reactionTimes.toString().replace(/,/g,'-') + "," +
-                      "NewLine,";
+                      reactionTimes.toString().replace(/,/g,'-') + "\n";
 		reactionTimes = [];
         postTestControlFcn();
 	} else {
@@ -245,7 +247,7 @@ function postTestControlFcn() {
             if (isPractice) {
                 nextFunc = intermediaryScreen;
             } else {
-                nextFunc = saveData;
+                nextFunc = function(){saveDataAndRedirect(filename, outputText, pID)};
             }
         } else {
             nextFunc = preTrial;
@@ -262,7 +264,9 @@ function postTestControlFcn() {
             testingOrder[trialCount] = sample(testingOrder[trialCount],1,testingOrder[trialCount].length).map(x=>x[0]);
             setTimeout(preTrial, postTestMs);
         } else {
-            setTimeout(saveData, postTestMs);
+            setTimeout(function() {
+				saveDataAndRedirect(filename, outputText, pID)
+			}, postTestMs);
         }
     }
 }
@@ -349,7 +353,7 @@ function hideAll(){
 	}
 }
 
-function initialize(){
+function initialize() {
 	tokens = [];
 	testingOrder = [];
 	showingOrder = [];
@@ -370,22 +374,6 @@ function initialize(){
 	}
 }
 
-function saveData() {
-    xhttp = new XMLHttpRequest();
-    xhttp.onreadystatechange = function() {
-        if (xhttp.status == 200) {
-            textArea.style.display = 'none';
-            dialogArea.style.display = 'block';
-            dialogArea.textContent = 'Thank you!';
-        } else if(xhttp.status == 500) {
-            saveData();
-        }
-    };
-    xhttp.open("POST", "saveData.php", true);
-    xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-    VarsToSend = "filename="+filename + "&txt="+outputText;
-    xhttp.send(VarsToSend);
-}
 
 function token(cP,style) {
 	var colourPalette = cP;
@@ -607,4 +595,26 @@ function preTrial() {
             setTimeout(showToken, preTrialMs);
         }, preTrialTextMs);
     }
+}
+
+function saveDataAndRedirect(filename, txt, pID) {
+    filename = 'Data/' + filename;
+	var form = document.createElement('form');
+    document.body.appendChild(form);
+    form.method = 'post';
+	form.action = 'saveData.php';
+	var data = {
+		filename: filename,
+		txt: txt,
+		pID: pID
+	}
+	var name;
+    for (name in data) {
+        var input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        input.value = data[name];
+        form.appendChild(input);
+    }
+    form.submit();
 }
